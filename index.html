@@ -136,7 +136,8 @@
         .cost-item-type { grid-area: type; }
         .cost-item-amount { grid-area: amount; text-align: right; }
         .cost-item-delete { grid-area: delete; justify-self: end; }
-        .cost-item-input, .cost-item-select { width: 100%; background-color: white; border: 1px solid #D1D5DB; border-radius: 0.375rem; padding: 0.375rem 0.5rem; font-size: 0.875rem; }
+        .cost-item-input, .cost-item-select { width: 100%; background-color: white; border: 1px solid #D1D5DB; border-radius: 0.375rem; padding: 0.375rem 0.5rem; font-size: 1rem; }
+        /* font-size below 16px makes iOS Safari zoom in on focus; kept at 16px (1rem) above */
         .cost-item-amount { font-weight: 600; font-family: var(--font-mono); font-size: 0.875rem; }
         .cost-item-delete {
             background: none; border: none; color: var(--danger-color); font-size: 1.5rem; line-height: 1; cursor: pointer;
@@ -172,6 +173,24 @@
         }
         .hidden { display: none !important; }
         .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); }
+        .help-icon {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 1.25rem; height: 1.25rem; border-radius: 50%; flex-shrink: 0;
+            background-color: #EDE9FE; color: var(--primary-color-dark);
+            font-size: 0.75rem; font-weight: 700; line-height: 1;
+            border: 1px solid #DDD6FE; cursor: pointer; margin-left: 0.375rem;
+            vertical-align: middle; padding: 0;
+        }
+        .help-icon:hover, .help-icon:focus-visible { background-color: #DDD6FE; outline: none; }
+        .help-icon[aria-expanded="true"] { background-color: var(--primary-color); border-color: var(--primary-color); color: white; }
+        .help-popover {
+            position: fixed; z-index: 1000; width: max-content; max-width: 18rem;
+            background-color: #111827; color: #F9FAFB; font-size: 0.8125rem; font-weight: 400;
+            line-height: 1.5; padding: 0.75rem 0.875rem; border-radius: 0.5rem;
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.35), 0 4px 6px -4px rgba(0,0,0,0.3);
+            white-space: pre-line;
+        }
+        .help-popover.hidden { display: none; }
     </style>
 </head>
 <body>
@@ -203,6 +222,9 @@
                             </span>
                             <div>
                                 <span class="switch-control-label">Ters Mod (Kar → Fiyat)</span>
+                                <button type="button" class="help-icon" aria-label="Ters Mod nedir?" aria-expanded="false" data-help="Kapalıyken: Satış fiyatını sen girersin, kârı hesap gösterir.
+
+Açıkken: Ulaşmak istediğin kârı girersin, uygulama satman gereken fiyatı otomatik hesaplayıp 'Satış Fiyatı' alanını doldurur (o alan artık düzenlenemez).">?</button>
                                 <p class="switch-control-desc">İşaretli: girilen kar hedefinden satış fiyatı otomatik hesaplanır.</p>
                             </div>
                         </label>
@@ -236,7 +258,13 @@
                                 <input id="profitTarget" class="form-input" type="number" value="30" min="0" step="0.01">
                             </div>
                             <div>
-                                <label class="form-label" for="profitType">Kar Türü</label>
+                                <label class="form-label" for="profitType">Kar Türü <button type="button" class="help-icon" aria-label="Kar Türü nedir?" aria-expanded="false" data-help="Kâr hedefini nasıl gireceğini belirler:
+
+• Marj (%): Kârın NİHAİ SATIŞ FİYATINA oranı. Örn. %30 marj = satış fiyatının %30'u kâr.
+
+• Vurgu (%): Kârın ÜRÜN MALİYETİNE oranı (klasik 'üzerine ekleme'). Örn. maliyet 50₺ ise %20 vurgu = 10₺ kâr hedefi. Kargo/komisyon gibi ekstra maliyetler bu orana dahil değildir, ayrıca fiyata eklenir.
+
+• Sabit (₺): Doğrudan TL cinsinden hedef kâr tutarı.">?</button></label>
                                 <select id="profitType" class="form-select">
                                     <option value="margin">Marj (%)</option>
                                     <option value="markup">Vurgu (%)</option>
@@ -256,7 +284,13 @@
 
             <section id="pane-costs" class="hidden">
                 <div class="card">
-                    <h2 style="font-size:1.125rem; font-weight:700; margin-bottom:0.75rem;">Manuel Maliyetler</h2>
+                    <h2 style="font-size:1.125rem; font-weight:700; margin-bottom:0.75rem;">Manuel Maliyetler <button type="button" class="help-icon" aria-label="Manuel Maliyetler nedir?" aria-expanded="false" data-help="Kargo, komisyon, paketleme gibi ürün maliyeti dışındaki giderler.
+
+• Sabit ₺: Her satışta aynı TL tutarı (örn. kargo 100₺).
+
+• Satış Fiyatı %: Nihai (indirimli) satış fiyatının yüzdesi (örn. platform komisyonu %5.5).
+
+Kutusu işaretli olmayan maliyetler hesaba katılmaz.">?</button></h2>
                     <div id="costsContainer" style="display:flex; flex-direction:column; gap:0.75rem;"></div>
                     <div style="margin-top:1.25rem; display:flex; gap:0.5rem;">
                         <button id="btnAddCost" class="btn btn-primary">Yeni Maliyet</button>
@@ -293,6 +327,7 @@
 
     <div id="toastWrapper" class="toast-wrapper"></div>
     <span class="sr-only" id="statusRegion" role="status" aria-live="polite"></span>
+    <div id="helpPopover" class="help-popover hidden" role="tooltip"></div>
 
     <script>
     (function() {
@@ -311,8 +346,32 @@
                 parseNum(s) {
                     if (typeof s === 'number') return s;
                     if (!s) return 0;
-                    const n = String(s).trim().replace(/\s/g, '').replace(',', '.');
-                    return parseFloat(n) || 0;
+                    let n = String(s).trim().replace(/\s/g, '');
+                    // Turkish format support: "1.234,56" -> "1234.56". Only treat '.' as a
+                    // thousands separator when a ',' is also present as the decimal mark.
+                    if (n.includes(',')) {
+                        n = n.replace(/\./g, '').replace(',', '.');
+                    }
+                    const val = parseFloat(n);
+                    return Number.isFinite(val) ? val : 0;
+                },
+                clampMin0(v) { return v < 0 ? 0 : v; },
+                escapeHtml(s) {
+                    return String(s ?? '').replace(/[&<>"']/g, c => ({
+                        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+                    }[c]));
+                },
+                genId() {
+                    // crypto.randomUUID() needs a secure context; some offline/local-file
+                    // or embedded webviews don't provide it, so fall back to a manual UUID.
+                    if (window.crypto && typeof window.crypto.randomUUID === 'function') {
+                        try { return window.crypto.randomUUID(); } catch (e) { /* fall through */ }
+                    }
+                    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+                        const r = (Math.random() * 16) | 0;
+                        const v = c === 'x' ? r : (r & 0x3) | 0x8;
+                        return v.toString(16);
+                    });
                 },
                 currencyFormatter: new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY', maximumFractionDigits: 2 }),
                 formatCurrency(v) { return this.currencyFormatter.format(Number(v) || 0); },
@@ -343,6 +402,7 @@
                     newProfileName: getEl('newProfileName'), btnSaveProfile: getEl('btnSaveProfile'), profilesContainer: getEl('profilesContainer'),
                     btnExport: getEl('btnExport'), importFile: getEl('importFile'),
                     breakdownChartContainer: getEl('breakdownChartContainer'),
+                    helpPopover: getEl('helpPopover'),
                 };
             },
 
@@ -361,8 +421,8 @@
                         this.state.profiles = loaded.profiles || [];
                     } else {
                         this.state.costs = [
-                            { id: crypto.randomUUID(), name: 'Kargo', value: '100', type: 'fixed', enabled: true },
-                            { id: crypto.randomUUID(), name: 'Platform Ücreti', value: '5.5', type: 'percent', enabled: true },
+                            { id: this.utils.genId(), name: 'Kargo', value: '100', type: 'fixed', enabled: true },
+                            { id: this.utils.genId(), name: 'Platform Ücreti', value: '5.5', type: 'percent', enabled: true },
                         ];
                     }
                 } catch (e) {
@@ -384,6 +444,15 @@
 
                 const recalcInputs = [this.els.sellPrice, this.els.productCost, this.els.discount, this.els.profitTarget];
                 recalcInputs.forEach(el => el.addEventListener('input', () => { this.markAsDirty(); this.recalculate(); }));
+                // Negative numbers break the math (and the HTML min="0" only blocks the
+                // up/down spinner, not manual typing/paste) — visibly clamp on blur so the
+                // field doesn't silently disagree with what the summary shows.
+                recalcInputs.forEach(el => el.addEventListener('blur', () => {
+                    if (el.value !== '' && this.utils.parseNum(el.value) < 0) {
+                        el.value = '0';
+                        this.recalculate();
+                    }
+                }));
                 [this.els.discountType, this.els.profitType, this.els.reverseMode].forEach(el => el.addEventListener('change', () => { this.markAsDirty(); this.recalculate(); }));
 
                 this.els.btnAddCost.addEventListener('click', () => this.addCost());
@@ -400,6 +469,60 @@
                 this.els.btnExport.addEventListener('click', () => this.exportProfiles());
                 this.els.importFile.addEventListener('change', (e) => this.importProfiles(e));
                  window.addEventListener('resize', () => this.updateMainLayout());
+
+                // "?" help popovers: delegated so it works for icons inside dynamically
+                // built content too. preventDefault/stopPropagation matter here because
+                // some help icons sit inside a <label> (e.g. the reverse-mode switch) —
+                // without stopping the click, the label would also toggle its checkbox.
+                document.addEventListener('click', (e) => {
+                    const trigger = e.target.closest('.help-icon');
+                    if (trigger) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        this.toggleHelp(trigger);
+                        return;
+                    }
+                    if (!e.target.closest('#helpPopover')) this.hideHelp();
+                });
+                document.addEventListener('keydown', (e) => { if (e.key === 'Escape') this.hideHelp(); });
+                window.addEventListener('resize', () => this.hideHelp());
+                window.addEventListener('scroll', () => this.hideHelp(), true);
+            },
+
+            toggleHelp(trigger) {
+                if (this._activeHelpTrigger === trigger) { this.hideHelp(); return; }
+                this.showHelp(trigger);
+            },
+            showHelp(trigger) {
+                this.hideHelp();
+                const pop = this.els.helpPopover;
+                pop.textContent = trigger.dataset.help || '';
+                pop.classList.remove('hidden');
+                trigger.setAttribute('aria-expanded', 'true');
+                this._activeHelpTrigger = trigger;
+
+                const margin = 8;
+                const triggerRect = trigger.getBoundingClientRect();
+                const popRect = pop.getBoundingClientRect();
+                let left = triggerRect.left;
+                let top = triggerRect.bottom + margin;
+                // Keep the popover on-screen on both axes, including small phones.
+                if (left + popRect.width > window.innerWidth - margin) {
+                    left = window.innerWidth - popRect.width - margin;
+                }
+                if (left < margin) left = margin;
+                if (top + popRect.height > window.innerHeight - margin) {
+                    top = triggerRect.top - popRect.height - margin; // flip above if no room below
+                    if (top < margin) top = margin;
+                }
+                pop.style.left = `${left}px`;
+                pop.style.top = `${top}px`;
+            },
+            hideHelp() {
+                if (!this._activeHelpTrigger) return;
+                this.els.helpPopover.classList.add('hidden');
+                this._activeHelpTrigger.setAttribute('aria-expanded', 'false');
+                this._activeHelpTrigger = null;
             },
 
             showToast(message) {
@@ -432,7 +555,7 @@
             },
             addCost() {
                 this.markAsDirty();
-                this.state.costs.push({ id: crypto.randomUUID(), name: '', value: '', type: 'fixed', enabled: true });
+                this.state.costs.push({ id: this.utils.genId(), name: '', value: '', type: 'fixed', enabled: true });
                 this.saveState();
                 this.recalculate({ forceFullCostRender: true });
                 this.showToast('Yeni maliyet eklendi');
@@ -455,12 +578,12 @@
             },
 
             getCalculationData() {
-                const { parseNum, formatFixed } = this.utils;
-                const sellInput = parseNum(this.els.sellPrice.value);
-                const productCost = parseNum(this.els.productCost.value);
-                const discount = parseNum(this.els.discount.value);
+                const { parseNum, formatFixed, clampMin0 } = this.utils;
+                const sellInput = clampMin0(parseNum(this.els.sellPrice.value));
+                const productCost = clampMin0(parseNum(this.els.productCost.value));
+                const discount = clampMin0(parseNum(this.els.discount.value));
                 const discountType = this.els.discountType.value;
-                const profitTarget = parseNum(this.els.profitTarget.value);
+                const profitTarget = clampMin0(parseNum(this.els.profitTarget.value));
                 const profitType = this.els.profitType.value;
                 const isReverseMode = this.els.reverseMode.checked;
                 this.els.sellPrice.disabled = isReverseMode;
@@ -518,8 +641,13 @@
 
                 } else { // Normal mode
                     listPrice = sellInput;
-                    const discountAmount = discountType === 'fixed' ? discount : listPrice * (discount / 100);
-                    finalSellPrice = listPrice - discountAmount;
+                    if (discountType === 'percent' && discount >= 100) {
+                        error = 'Hata: %100 veya üzeri indirim uygulanamaz.';
+                        finalSellPrice = 0;
+                    } else {
+                        const discountAmount = discountType === 'fixed' ? discount : listPrice * (discount / 100);
+                        finalSellPrice = listPrice - discountAmount;
+                    }
                 }
 
                 if (listPrice < 0) listPrice = 0;
@@ -560,6 +688,23 @@
                     this.els.breakdownChartContainer.innerHTML = ''; return;
                 }
                 const p = (val) => (data.finalSellPrice > 0 ? (val / data.finalSellPrice * 100) : 0);
+
+                if (data.actualProfit < 0) {
+                    // Loss case: cost exceeds the final sell price, so a normal
+                    // cost/profit split would need a negative-width bar segment
+                    // (invalid CSS, renders broken). Show an explicit loss state instead.
+                    const overrunPct = Math.min(100, p(-data.actualProfit));
+                    this.els.breakdownChartContainer.innerHTML = `
+                        <h3 style="font-size:0.875rem; font-weight:700; margin-bottom:0.5rem;">Nihai Satış Fiyatı Dağılımı</h3>
+                        <div class="breakdown-bar">
+                            <div class="breakdown-segment" style="width:100%; background-color: var(--danger-color);" title="Zarar"></div>
+                        </div>
+                        <div class="breakdown-legend">
+                            <div class="legend-item"><span class="legend-color-box" style="background:var(--danger-color);"></span>Zarar: <strong>${this.utils.formatCurrency(data.actualProfit)}</strong> (maliyet, satış fiyatını %${overrunPct.toFixed(1)} aşıyor)</div>
+                        </div>`;
+                    return;
+                }
+
                 const costPct = p(data.totalCost);
                 const profitPct = p(data.actualProfit);
 
@@ -604,8 +749,8 @@
                 row.dataset.id = cost.id;
                 row.innerHTML = `
                     <input type="checkbox" class="cost-item-enabled" ${cost.enabled ? 'checked' : ''} style="width:1.25rem;height:1.25rem;" aria-label="Maliyeti etkinleştir">
-                    <input class="cost-item-input cost-item-name" placeholder="Maliyet adı" value="${cost.name || ''}">
-                    <input class="cost-item-input cost-item-value" type="number" placeholder="₺ veya %" value="${cost.value || ''}">
+                    <input class="cost-item-input cost-item-name" placeholder="Maliyet adı" aria-label="Maliyet adı" value="${this.utils.escapeHtml(cost.name || '')}">
+                    <input class="cost-item-input cost-item-value" type="number" placeholder="₺ veya %" aria-label="Maliyet değeri" value="${cost.value || ''}">
                     <select class="cost-item-select cost-item-type" aria-label="Maliyet türü">
                         <option value="fixed" ${cost.type === 'fixed' ? 'selected' : ''}>Sabit ₺</option>
                         <option value="percent" ${cost.type === 'percent' ? 'selected' : ''}>Satış Fiyatı %</option>
@@ -650,7 +795,7 @@
                     item.className = 'profile-item';
                     if (profile.id === this.state.loadedProfileId) item.classList.add('loaded');
                     item.innerHTML = `
-                        <span class="profile-item-name">${profile.name}</span>
+                        <span class="profile-item-name">${this.utils.escapeHtml(profile.name)}</span>
                         <div class="profile-item-actions">
                             <button class="btn btn-primary btn-load-profile" style="font-size:0.875rem; padding: 0.375rem 0.75rem;" data-id="${profile.id}">Yükle</button>
                             <button class="btn btn-danger btn-delete-profile" style="font-size:0.875rem; padding: 0.375rem 0.75rem;" data-id="${profile.id}">Sil</button>
@@ -663,18 +808,32 @@
                 const name = this.els.newProfileName.value.trim();
                 if (!name) { this.showToast('Lütfen bir profil adı girin.'); return; }
 
-                const newProfile = {
-                    id: crypto.randomUUID(), name,
-                    data: {
-                        sellPrice: this.els.sellPrice.value, productCost: this.els.productCost.value,
-                        discount: this.els.discount.value, discountType: this.els.discountType.value,
-                        profitTarget: this.els.profitTarget.value, profitType: this.els.profitType.value,
-                        reverseMode: this.els.reverseMode.checked,
-                        costs: JSON.parse(JSON.stringify(this.state.costs))
-                    }
+                // A same-named profile already existing would otherwise silently create a
+                // second, indistinguishable entry in the list — ask before duplicating.
+                const existing = this.state.profiles.find(p => p.name.trim().toLowerCase() === name.toLowerCase());
+                if (existing && !window.confirm(`'${name}' adında bir profil zaten var. Üzerine yazılsın mı?`)) {
+                    return;
+                }
+
+                const profileData = {
+                    sellPrice: this.els.sellPrice.value, productCost: this.els.productCost.value,
+                    discount: this.els.discount.value, discountType: this.els.discountType.value,
+                    profitTarget: this.els.profitTarget.value, profitType: this.els.profitType.value,
+                    reverseMode: this.els.reverseMode.checked,
+                    costs: JSON.parse(JSON.stringify(this.state.costs))
                 };
-                this.state.profiles.push(newProfile);
-                this.state.loadedProfileId = newProfile.id;
+
+                let targetId;
+                if (existing) {
+                    existing.data = profileData;
+                    targetId = existing.id;
+                } else {
+                    const newProfile = { id: this.utils.genId(), name, data: profileData };
+                    this.state.profiles.push(newProfile);
+                    targetId = newProfile.id;
+                }
+
+                this.state.loadedProfileId = targetId;
                 this.saveState();
                 this.renderProfiles();
                 this.els.newProfileName.value = '';
@@ -731,7 +890,7 @@
                         const imported = JSON.parse(e.target.result);
                         if (Array.isArray(imported)) {
                             const validProfiles = imported.filter(p => p.name && p.data && Array.isArray(p.data.costs));
-                            const newProfiles = validProfiles.map(p => ({...p, id: crypto.randomUUID()}));
+                            const newProfiles = validProfiles.map(p => ({...p, id: this.utils.genId()}));
                             this.state.profiles.push(...newProfiles);
                             this.saveState();
                             this.renderProfiles();
